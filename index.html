@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winea | De la bouteille au vin</title>
+    <meta name="theme-color" content="#2a2216">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Cinzel:wght@400&display=swap" rel="stylesheet">
+    <script type="importmap">
+        { "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        } }
+    </script>
+    <style>
+        :root { --ink: #f1e7d8; --muted: #a8988a; --wine: #7a1626; --gold: #c9a45c; --bg: #0d0809; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Cormorant Garamond", Georgia, serif; }
+        #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+        /* Vignette cinéma */
+        body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 60% 50%, transparent 50%, rgba(0, 0, 0, .4) 100%), linear-gradient(90deg, rgba(12, 9, 6, .78), rgba(12, 9, 6, .35) 38%, transparent 60%); }
+        @media (max-aspect-ratio: 1/1) { body::after { background: radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(0, 0, 0, .4) 100%); } }
+        .progress { position: fixed; left: 0; top: 0; height: 1px; width: 100%; background: var(--gold); transform-origin: left; transform: scaleX(0); z-index: 3; }
+        .brand { position: fixed; top: 28px; left: 6vw; z-index: 3; font-family: Cinzel, serif; letter-spacing: .5em; font-size: 13px; color: var(--gold); }
+        .hint { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); color: var(--muted); font-family: Cinzel, serif; font-size: 11px; letter-spacing: .4em; transition: opacity .6s; z-index: 3; }
+        .hint::after { content: ""; display: block; width: 1px; height: 40px; margin: 12px auto 0; background: linear-gradient(var(--gold), transparent); }
+        main { position: relative; z-index: 2; pointer-events: none; }
+        /* Chaque étape occupe un écran */
+        .step { min-height: 110vh; display: flex; align-items: center; padding: 0 6vw; }
+        .card { max-width: 400px; opacity: 0; transform: translateY(24px); transition: opacity 1s ease, transform 1.2s cubic-bezier(.2, .7, .2, 1); }
+        .step.on .card { opacity: 1; transform: none; }
+        .card small { display: flex; align-items: center; gap: 16px; color: var(--gold); font-family: Cinzel, serif; letter-spacing: .35em; font-size: 11px; }
+        .card small::before { content: ""; width: 48px; height: 1px; background: var(--gold); }
+        .card h2 { font-size: clamp(36px, 4.6vw, 64px); font-weight: 300; font-style: italic; line-height: 1.05; margin: .45em 0 .4em; }
+        .card p { color: var(--muted); line-height: 1.7; font-size: 19px; font-weight: 300; }
+        .step:last-child { min-height: 140vh; }
+        @media (max-aspect-ratio: 1/1) {
+            .step { align-items: flex-end; padding-bottom: 10vh; }
+            .card { background: linear-gradient(transparent, rgba(13, 8, 9, .85) 30%); padding: 40px 20px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="scene" role="img" aria-label="Une bouteille de vin se remplit, est bouchée, capsulée, étiquetée puis posée sur une table"></canvas>
+    <div class="progress" id="progress"></div>
+    <div class="brand">WINEA</div>
+    <div class="hint" id="hint">DÉFILER</div>
+
+    <main>
+        <section class="step"><div class="card"><small>I · Le verre</small><h2>Une bordelaise, soufflée pour durer</h2><p>Épaules franches, col élancé, bague au sommet et piqûre au fond. Le verre attend son vin.</p></div></section>
+        <section class="step"><div class="card"><small>II · Le vin</small><h2>Le remplissage</h2><p>Le vin coule, tourbillonne et monte lentement jusqu'à la naissance du col.</p></div></section>
+        <section class="step"><div class="card"><small>III · Le bouchon</small><h2>Liège naturel</h2><p>Comprimé puis libéré, il épouse le goulot et scelle le millésime.</p></div></section>
+        <section class="step"><div class="card"><small>IV · La capsule</small><h2>Le surbouchage</h2><p>La capsule glisse sur le col puis se resserre, sertie à la perfection.</p></div></section>
+        <section class="step"><div class="card"><small>V · L'étiquette</small><h2>La signature</h2><p>Papier vergé et dorure à chaud, appliqués d'un seul geste.</p></div></section>
+        <section class="step"><div class="card"><small>VI · Prête</small><h2>Sur la table</h2><p>Assemblée, la bouteille se redresse et se pose. Il ne reste qu'à l'ouvrir.</p></div></section>
+    </main>
+
+    <script type="module">
+        import * as THREE from 'three';
+        
+        // ----- Timeline (fractions du scroll total) -----
+        const T = {
+            fill:    [0.10, 0.34],
+            cork:    [0.39, 0.53],
+            capsule: [0.56, 0.70],
+            label:   [0.73, 0.87],
+            upright: [0.66, 0.95],
+            settle:  [0.84, 0.97],
+        };
+        // Caméra : [p, hauteur visée sur la bouteille, distance, élévation, lacet]
+        const SHOTS = [
+            [0.00, 1.50, 6.2, 0.10, -0.15],
+            [0.10, 1.75, 5.8, 0.14, -0.10],
+            [0.34, 1.55, 4.2, 0.10, -0.05],
+            [0.40, 2.82, 1.7, 0.18, -0.25],
+            [0.53, 2.80, 1.8, 0.24, -0.10],
+            [0.57, 2.72, 2.1, 0.04, -0.35],
+            [0.70, 2.72, 2.1, 0.10, -0.25],
+            [0.74, 1.12, 2.6, 0.02, -0.40],
+            [0.87, 1.12, 3.0, 0.05, -0.30],
+            [1.00, 1.50, 6.6, 0.10, 0.20],
+        ];
+        const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+        const seg = (p, [a, b]) => clamp((p - a) / (b - a));
+        const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        const easeOut = t => 1 - Math.pow(1 - t, 3);
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const bell = t => Math.sin(Math.PI * clamp(t));
+
+        // ----- Renderer / scène -----
+        const canvas = document.getElementById('scene');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.localClippingEnabled = true;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#d9c29a');
+        scene.fog = new THREE.Fog('#d9c29a', 12, 30);
+        // Environnement extérieur pour les reflets : ciel doré, horizon, sol de vigne, soleil bas + un réflecteur
+        const outdoor = new THREE.Scene();
+        outdoor.add(new THREE.Mesh(new THREE.SphereGeometry(20, 64, 32), new THREE.MeshBasicMaterial({ side: THREE.BackSide, map: canvasTex(16, 512, (g, w, h) => {
+            const l = g.createLinearGradient(0, 0, 0, h);
+            l.addColorStop(0, '#6f8fb0'); l.addColorStop(.42, '#f2d29c'); l.addColorStop(.5, '#e7b878'); l.addColorStop(.53, '#5d6a34'); l.addColorStop(1, '#2e2a18');
+            g.fillStyle = l; g.fillRect(0, 0, w, h);
+        }) })));
+        const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(1.2, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd9a0').multiplyScalar(30) }));
+        sunDisc.position.set(-10, 6, -14); sunDisc.lookAt(0, 0, 0); outdoor.add(sunDisc);
+        const reflector = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color('#fff4e2').multiplyScalar(3), side: THREE.DoubleSide }));
+        reflector.position.set(-6, 0, 4); reflector.lookAt(0, 0, 0); outdoor.add(reflector);
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmrem.fromScene(outdoor, 0.02).texture;
+        scene.environmentIntensity = 0.8;
+
+        const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
+
+        // Soleil bas en contre-jour (arrière gauche) : ombre portée vers l'avant, liseré doré sur le verre
+        const key = new THREE.DirectionalLight('#ffcf8f', 3.2);
+        key.position.set(-5, 4, -4);
+        key.castShadow = true;
+        key.shadow.mapSize.set(2048, 2048);
+        Object.assign(key.shadow.camera, { left: -4, right: 4, top: 5, bottom: -3 });
+        key.shadow.radius = 5;
+        scene.add(key);
+        const fill = new THREE.DirectionalLight('#fff1dc', 1.1);
+        fill.position.set(3, 3, 5);
+        scene.add(fill);
+        scene.add(new THREE.HemisphereLight('#ffe6bf', '#4d5a2a', 0.9));
+
+        // ----- Textures (canvas en attendant les assets générés) -----
+        const loader = new THREE.TextureLoader();
+        // Remplace la texture canvas par assets/img/<file> s'il existe
+        const tryAsset = (tex, file, onLoad) => loader.load('assets/img/' + file, t => { tex.dispose(); tex.image = t.image; tex.needsUpdate = true; onLoad?.(); }, undefined, () => {});
+
+        function canvasTex(w, h, draw, srgb = true) {
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            draw(c.getContext('2d'), w, h);
+            const t = new THREE.CanvasTexture(c);
+            if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+            t.anisotropy = 8;
+            return t;
+        }
+
+        // Étiquette dessinée deux fois : couleurs, puis carte PBR (G = rugosité, B = métal) pour la dorure à chaud
+        function drawLabel(g, w, h, pbr) {
+            const paper = pbr ? 'rgb(0,220,0)' : '#efe6d2';
+            const ink = pbr ? 'rgb(0,200,0)' : '#2a1a14';
+            const foil = pbr ? 'rgb(0,95,170)' : '#c9a45c';
+            const red = pbr ? 'rgb(0,200,0)' : '#7a1626';
+            g.fillStyle = paper; g.fillRect(0, 0, w, h);
+            if (!pbr) for (let y = 0; y < h; y += 6) { g.fillStyle = 'rgba(120,100,70,.05)'; g.fillRect(0, y, w, 1); } // papier vergé
+            g.strokeStyle = foil; g.lineWidth = 8; g.strokeRect(46, 46, w - 92, h - 92);
+            g.lineWidth = 2; g.strokeRect(66, 66, w - 132, h - 132);
+            g.textAlign = 'center';
+            g.fillStyle = ink; g.font = 'italic 300 48px "Cormorant Garamond", Georgia'; g.fillText('Grand Vin de', w / 2, 300);
+            g.fillStyle = foil; g.font = '128px Cinzel, Georgia'; g.fillText('WINEA', w / 2, 450);
+            g.fillStyle = ink; g.font = '34px Cinzel, Georgia'; g.fillText('BORDEAUX SUPÉRIEUR', w / 2, 540);
+            g.strokeStyle = foil; g.lineWidth = 2; g.beginPath(); g.moveTo(330, 600); g.lineTo(670, 600); g.stroke();
+            g.fillStyle = foil; g.beginPath(); g.arc(w / 2, 600, 7, 0, 7); g.fill();
+            g.fillStyle = red; g.font = '96px Cinzel, Georgia'; g.fillText('2024', w / 2, 760);
+            g.fillStyle = ink; g.font = '32px "Cormorant Garamond", Georgia';
+            g.fillText('Mis en bouteille au château', w / 2, 1000);
+            g.fillText('75 cl · 13,5 % vol.', w / 2, 1050);
+        }
+
+        const woodTex = canvasTex(1024, 1024, (g, w, h) => {
+            g.fillStyle = '#2e1a10'; g.fillRect(0, 0, w, h);
+            for (let i = 0; i < 180; i++) {
+                const y = Math.random() * h;
+                g.strokeStyle = `rgba(${10 + Math.random() * 50},${5 + Math.random() * 25},5,${.15 + Math.random() * .35})`;
+                g.lineWidth = 1 + Math.random() * 4;
+                g.beginPath(); g.moveTo(0, y);
+                for (let x = 0; x <= w; x += 64) g.lineTo(x, y + Math.sin(x / 140 + i) * 6);
+                g.stroke();
+            }
+        });
+        tryAsset(woodTex, 'wood.jpg');
+
+        const corkTex = canvasTex(256, 256, (g, w, h) => {
+            g.fillStyle = '#c49a6c'; g.fillRect(0, 0, w, h);
+            for (let i = 0; i < 1400; i++) {
+                g.fillStyle = `rgba(${90 + Math.random() * 60},${55 + Math.random() * 40},30,${Math.random() * .5})`;
+                g.beginPath(); g.arc(Math.random() * w, Math.random() * h, Math.random() * 3, 0, 7); g.fill();
+            }
+        });
+        tryAsset(corkTex, 'cork.jpg');
+
+        // ----- Bouteille bordelaise 75 cl (profils en cm, h 30, Ø 7,5 ; 1 unité = 10 cm) -----
+        const cm = pts => pts.map(([r, y]) => new THREE.Vector2(r / 10, y / 10));
+        // Profil lissé (spline centripète, échantillonnée à pas constant) : pas de facettes ni de cassure de courbure
+        // entre les longs segments du corps et les courts de l'épaule
+        const smooth = (pts, n = 400) => new THREE.CatmullRomCurve3(cm(pts).map(v => new THREE.Vector3(v.x, v.y, 0)), false, 'centripetal')
+            .getSpacedPoints(n).map(v => new THREE.Vector2(v.x, v.y));
+        // Extérieur : piqûre, talon arrondi, corps, épaule haute, col légèrement conique, contre-bague + bague
+        const outer = [[0,2.4],[0.8,2.25],[1.7,1.6],[2.4,0.9],[2.8,0.45],[3.05,0.04],[3.4,0.1],[3.64,0.38],[3.75,0.95],[3.75,10],[3.75,19.6],
+            [3.68,20.6],[3.45,21.5],[3.0,22.3],[2.4,23.0],[1.9,23.6],[1.65,24.2],[1.56,25.0],[1.5,27.5],[1.47,28.6],
+            [1.49,28.72],[1.62,28.8],[1.66,29.05],[1.6,29.25],[1.68,29.4],[1.69,29.8],[1.62,29.98],[1.35,30.05],[1.0,29.97]];
+        // Intérieur : verre ~3 mm sur les parois, ~7 mm au fond
+        const inner = [[0.93,29.6],[0.93,25.0],[1.2,24.2],[1.58,23.6],[2.12,23.0],[2.72,22.3],[3.17,21.5],[3.38,20.6],[3.45,19.6],[3.45,10],[3.45,1.4],
+            [3.35,0.95],[3.0,0.75],[2.5,1.0],[1.7,2.0],[0.8,2.7],[0,2.85]];
+        const wineWall = [[3.43,1.4],[3.43,10],[3.43,19.6],[3.36,20.6],[3.15,21.5],[2.7,22.3],[2.1,23.0],[1.56,23.6],[1.18,24.2],[0.91,25.0],[0.91,25.5]];
+        const winePts = [[0,2.87],[0.8,2.72],[1.7,2.02],[2.5,1.02],[3.0,0.77],[3.33,0.97], ...wineWall, [0,25.5]];
+        const FILL_TOP = 2.45; // niveau final : naissance du col (~5,5 cm sous la bague)
+
+        // Rayon intérieur (unités) à la hauteur locale y, sur la paroi montante
+        const wall = smooth(wineWall).map(v => [v.x, v.y]);
+        function wineR(y) {
+            for (let i = 1; i < wall.length; i++) {
+                if (y <= wall[i][1]) return lerp(wall[i - 1][0], wall[i][0], clamp((y - wall[i - 1][1]) / (wall[i][1] - wall[i - 1][1])));
+            }
+            return wall[wall.length - 1][0];
+        }
+
+        const bottle = new THREE.Group();
+        scene.add(bottle);
+
+        // Légères ondulations du verre soufflé : casse les reflets trop parfaits
+        const glassNormal = (() => {
+            const N = 512, c = document.createElement('canvas'); c.width = c.height = N;
+            const g = c.getContext('2d'), d = g.createImageData(N, N);
+            const hgt = (x, y) => Math.sin(y / N * Math.PI * 2 * 9 + Math.sin(x / N * Math.PI * 2 * 2) * 1.5) + 0.5 * Math.sin(y / N * Math.PI * 2 * 23 + x / N * Math.PI * 2);
+            for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+                const dx = hgt(x + 1, y) - hgt(x - 1, y), dy = hgt(x, y + 1) - hgt(x, y - 1), i = (y * N + x) * 4;
+                d.data[i] = 128 - dx * 60; d.data[i + 1] = 128 - dy * 60; d.data[i + 2] = 255; d.data[i + 3] = 255;
+            }
+            g.putImageData(d, 0, 0);
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 6); t.anisotropy = 8;
+            return t;
+        })();
+
+        // Verre vert sombre (« feuille morte ») : quasi noir de face, vert là où la lumière le traverse
+        const glass = new THREE.Mesh(
+            new THREE.LatheGeometry([...smooth(outer, 500), ...smooth(inner)], 192),
+            new THREE.MeshPhysicalMaterial({
+                color: '#ffffff', transmission: 1, thickness: 0.1, roughness: 0.02, ior: 1.52,
+                attenuationColor: '#3f6b26', attenuationDistance: 0.32, side: THREE.DoubleSide,
+                specularIntensity: 1, clearcoat: 1, clearcoatRoughness: 0.02,
+                normalMap: glassNormal, normalScale: new THREE.Vector2(0.06, 0.06),
+            })
+        );
+        glass.castShadow = true;
+        bottle.add(glass);
+
+        // Vin : volume coupé par un plan horizontal du monde, surface reconstruite chaque frame
+        const WINE = new THREE.Color('#4a0812'), FOAM = new THREE.Color('#b05a68'), MENISCUS = new THREE.Color('#6e1424');
+        const wineLevel = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+        const wine = new THREE.Mesh(
+            new THREE.LatheGeometry(smooth(winePts), 192),
+            new THREE.MeshPhysicalMaterial({ color: WINE, roughness: 0.1, clearcoat: 1, side: THREE.DoubleSide, clippingPlanes: [wineLevel] })
+        );
+        wine.castShadow = true;
+        bottle.add(wine);
+
+        // Surface du vin : disque en anneaux qui suit la paroi, ondes au point d'impact, mousse rosée
+        const SEG = 72, RINGS = 10;
+        const surfGeo = new THREE.BufferGeometry();
+        const surfPos = new Float32Array((RINGS + 1) * SEG * 3), surfCol = new Float32Array((RINGS + 1) * SEG * 3);
+        surfGeo.setAttribute('position', new THREE.BufferAttribute(surfPos, 3));
+        surfGeo.setAttribute('color', new THREE.BufferAttribute(surfCol, 3));
+        const idx = [];
+        for (let j = 0; j < RINGS; j++) for (let i = 0; i < SEG; i++) {
+            const a = j * SEG + i, b = j * SEG + (i + 1) % SEG, c = a + SEG, d = b + SEG;
+            idx.push(a, c, b, b, c, d);
+        }
+        surfGeo.setIndex(idx);
+        const surface = new THREE.Mesh(surfGeo, new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.04, clearcoat: 1, side: THREE.DoubleSide }));
+        scene.add(surface);
+
+        const rim3 = Array.from({ length: SEG }, () => new THREE.Vector3());
+        const center = new THREE.Vector3(), tmpC = new THREE.Color();
+        function updateSurface(h, impact, ripple, foam, t) {
+            const e = bottle.matrixWorld.elements;
+            center.set(0, 0, 0);
+            for (let i = 0; i < SEG; i++) {
+                const th = i / SEG * Math.PI * 2, dx = Math.sin(th), dz = Math.cos(th);
+                const k = e[1] * dx + e[9] * dz;
+                const f = y => k * wineR(y) + e[5] * y + e[13] - h;
+                let lo = 0.12, hi = 2.55;
+                if (f(lo) > 0) hi = lo; else if (f(hi) < 0) lo = hi;
+                for (let n = 0; n < 18 && hi - lo > 1e-5; n++) { const m = (lo + hi) / 2; f(m) > 0 ? hi = m : lo = m; }
+                const y = (lo + hi) / 2, r = wineR(y) * 0.995;
+                rim3[i].set(r * dx, y, r * dz).applyMatrix4(bottle.matrixWorld);
+                center.add(rim3[i]);
+            }
+            center.divideScalar(SEG);
+            for (let j = 0; j <= RINGS; j++) {
+                const u = j / RINGS, damp = 1 - u * u;
+                for (let i = 0; i < SEG; i++) {
+                    const o = (j * SEG + i) * 3;
+                    const x = lerp(center.x, rim3[i].x, u), z = lerp(center.z, rim3[i].z, u);
+                    const d = Math.hypot(x - impact.x, z - impact.z);
+                    const wave = Math.sin(d * 95 - t * 16) * Math.exp(-d * 7) + 0.4 * Math.sin(x * 70 + t * 5) * Math.sin(z * 60 - t * 4);
+                    surfPos[o] = x; surfPos[o + 1] = lerp(center.y, rim3[i].y, u) + wave * ripple * 0.008 * damp; surfPos[o + 2] = z;
+                    const noise = 0.5 + 0.5 * Math.sin(i * 12.9898 + j * 78.233 + t * 2);
+                    tmpC.lerpColors(WINE, MENISCUS, u > 0.85 ? 0.6 : 0)
+                        .lerp(FOAM, clamp(foam * clamp(1 - d / 0.14) * (0.5 + 0.5 * noise)));
+                    tmpC.toArray(surfCol, o);
+                }
+            }
+            surfGeo.attributes.position.needsUpdate = true;
+            surfGeo.attributes.color.needsUpdate = true;
+            surfGeo.computeVertexNormals();
+        }
+
+        // Filet de vin : tube le long d'une courbe, ondulé dans le shader
+        const uTime = { value: 0 };
+        const streamMat = new THREE.MeshPhysicalMaterial({ color: '#5a0a16', roughness: 0.05, clearcoat: 1, sheen: 0.5, sheenColor: '#ff6a7a' });
+        streamMat.onBeforeCompile = sh => {
+            sh.uniforms.uTime = uTime;
+            sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+                transformed += objectNormal * 0.0055 * (sin(uv.x * 140.0 - uTime * 26.0) + 0.6 * sin(uv.x * 57.0 + uv.y * 12.566 + uTime * 9.0));`);
+        };
+        const stream = new THREE.Mesh(new THREE.BufferGeometry(), streamMat);
+        stream.castShadow = true;
+        scene.add(stream);
+        const pourCurve = new THREE.CatmullRomCurve3([0, 1, 2, 3, 4].map(() => new THREE.Vector3()));
+
+        // Bouchon
+        const cork = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.094, 0.094, 0.45, 64),
+            new THREE.MeshStandardMaterial({ map: corkTex, roughness: 0.9 })
+        );
+        cork.castShadow = true;
+        bottle.add(cork);
+        const CORK_Y = 3.0 - 0.225 - 0.003;
+
+        // Capsule : jupe métallisée, dessus frappé d'un monogramme, filet doré
+        const capsule = new THREE.Group();
+        const capMat = new THREE.MeshPhysicalMaterial({ color: '#5e0c1a', metalness: 0.85, roughness: 0.28, clearcoat: 0.8, clearcoatRoughness: 0.1, side: THREE.DoubleSide });
+        const gold = new THREE.MeshPhysicalMaterial({ color: '#d4af6a', metalness: 1, roughness: 0.2 });
+        const skirt = new THREE.Mesh(new THREE.LatheGeometry(smooth([[1.62,30.14],[1.72,30.02],[1.72,29.1],[1.54,28.85],[1.53,26.5],[1.58,25.6]]), 128), capMat);
+        skirt.castShadow = true;
+        const topTex = canvasTex(512, 512, (g, w, h) => {
+            g.fillStyle = '#5e0c1a'; g.fillRect(0, 0, w, h);
+            g.strokeStyle = '#d4af6a'; g.lineWidth = 6; g.beginPath(); g.arc(w / 2, h / 2, 200, 0, 7); g.stroke();
+            g.fillStyle = '#d4af6a'; g.font = '220px Cinzel, Georgia'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('W', w / 2, h / 2 + 10);
+        });
+        // Le disque de l'image générée occupe 53→968 px sur 1024 : on recadre pour supprimer la marge transparente
+        tryAsset(topTex, 'capsule-top.png', () => { topTex.repeat.set(0.894, 0.892); topTex.offset.set(0.052, 0.055); });
+        const capTop = new THREE.Mesh(new THREE.CircleGeometry(0.163, 96), new THREE.MeshPhysicalMaterial({ map: topTex, metalness: 0.85, roughness: 0.3, clearcoat: 0.8 }));
+        capTop.rotation.x = -Math.PI / 2;
+        capTop.position.y = 3.0141;
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.1725, 0.0025, 8, 128), gold);
+        band.rotation.x = Math.PI / 2;
+        band.position.y = 2.94;
+        capsule.add(skirt, capTop, band);
+        bottle.add(capsule);
+
+        // Étiquette : plan souple qui s'approche puis s'enroule depuis le centre, dorure en métal réel
+        const LABEL = { r: 0.3792, h: 1.15, y: 1.12, w: 0.98 };
+        const labelColor = canvasTex(1000, 1180, (g, w, h) => drawLabel(g, w, h, false));
+        const labelPbr = canvasTex(1000, 1180, (g, w, h) => drawLabel(g, w, h, true), false);
+        const labelMat = new THREE.MeshPhysicalMaterial({
+            map: labelColor, roughnessMap: labelPbr, metalnessMap: labelPbr, roughness: 1, metalness: 1,
+            clearcoat: 0.15, side: THREE.DoubleSide, transparent: true,
+        });
+        // Étiquette générée : la dorure est retrouvée en isolant les pixels or de l'image
+        tryAsset(labelColor, 'label.png', () => {
+            const img = labelColor.image, c = document.createElement('canvas');
+            c.width = img.width; c.height = img.height;
+            const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+            const d = g.getImageData(0, 0, c.width, c.height), px = d.data;
+            for (let i = 0; i < px.length; i += 4) {
+                const [r, gr, b] = [px[i], px[i + 1], px[i + 2]];
+                const isGold = r > 140 && r - b > 70 && gr - b > 40 && gr > r * 0.6;
+                px[i] = 0; px[i + 1] = isGold ? 95 : 220; px[i + 2] = isGold ? 170 : 0;
+            }
+            g.putImageData(d, 0, 0);
+            labelPbr.dispose(); labelPbr.image = c; labelPbr.needsUpdate = true;
+        });
+        document.fonts.ready.then(() => {
+            if (!(labelColor.image instanceof HTMLCanvasElement)) return; // étiquette générée déjà chargée
+            [[labelColor, false], [labelPbr, true]].forEach(([t, pbr]) => { drawLabel(t.image.getContext('2d'), 1000, 1180, pbr); t.needsUpdate = true; });
+        });
+        const labelGeo = new THREE.PlaneGeometry(LABEL.w, LABEL.h, 96, 1);
+        const flat = labelGeo.attributes.position.array.slice();
+        const label = new THREE.Mesh(labelGeo, labelMat);
+        label.position.y = LABEL.y;
+        label.castShadow = true;
+        bottle.add(label);
+
+        function shapeLabel(a, t) {
+            const approach = ease(clamp(a / 0.45));
+            const k = easeOut(clamp((a - 0.45) / 0.55));         // part déjà collée
+            const sc = k * LABEL.w / 2, R = LABEL.r;
+            const lift = (0.18 + 0.04 * Math.sin(t * 3)) * (1 - k); // bords qui se relèvent comme du papier
+            const zOff = lerp(0.45, 0, approach), yOff = lerp(0.3, 0, approach), swing = lerp(-0.8, 0, approach);
+            const cs = Math.cos(swing), sn = Math.sin(swing);
+            const pos = labelGeo.attributes.position.array;
+            for (let v = 0; v < pos.length; v += 3) {
+                const x = flat[v], y = flat[v + 1], ax = Math.abs(x), sg = Math.sign(x) || 1;
+                let px, pz;
+                if (ax <= sc) { px = R * Math.sin(x / R); pz = R * Math.cos(x / R); }
+                else {
+                    const phi = sg * sc / R, L = ax - sc;
+                    const tx = sg * Math.cos(phi), tz = -sg * Math.sin(phi), nx = Math.sin(phi), nz = Math.cos(phi);
+                    px = R * nx + L * (tx * Math.cos(lift) + nx * Math.sin(lift));
+                    pz = R * nz + L * (tz * Math.cos(lift) + nz * Math.sin(lift));
+                }
+                pz += zOff;
+                pos[v] = px * cs + (pz - R) * sn; pos[v + 1] = y + yOff; pos[v + 2] = R + (pz - R) * cs - px * sn;
+            }
+            labelGeo.attributes.position.needsUpdate = true;
+            labelGeo.computeVertexNormals();
+        }
+
+        // Reflet qui balaie la bouteille à chaque étape terminée
+        const glint = new THREE.PointLight('#fff0d8', 0, 1.6, 2);
+        bottle.add(glint);
+        const SWEEPS = [
+            [0.63, 0.71, [0.28, 3.15, 0.3], [0.28, 2.5, 0.3], 1.2],
+            [0.84, 0.90, [-0.6, 1.2, 0.45], [0.6, 1.0, 0.45], 1.6],
+            [0.93, 1.00, [0.35, 3.2, 0.6], [0.35, 0.3, 0.6], 2.2],
+        ];
+
+        // Décor : vignes et château, flous comme avec une faible profondeur de champ.
+        // Version peinte en attendant assets/img/vineyard.jpg ; horizon à ~50 % de la hauteur de l'image
+        const backdrop = new THREE.Mesh(
+            new THREE.PlaneGeometry(27, 16.9),
+            new THREE.MeshBasicMaterial({ fog: false, toneMapped: false, map: canvasTex(2048, 1280, (g, w, h) => {
+                const c = document.createElement('canvas'); c.width = w; c.height = h;
+                const p = c.getContext('2d'), hz = h * 0.5;
+                const sky = p.createLinearGradient(0, 0, 0, hz);
+                sky.addColorStop(0, '#8fa7bd'); sky.addColorStop(.7, '#efd3a2'); sky.addColorStop(1, '#f6d69a');
+                p.fillStyle = sky; p.fillRect(0, 0, w, hz);
+                const sun = p.createRadialGradient(w * .22, hz * .8, 0, w * .22, hz * .8, w * .3);
+                sun.addColorStop(0, 'rgba(255,236,190,.95)'); sun.addColorStop(1, 'rgba(255,220,160,0)');
+                p.fillStyle = sun; p.fillRect(0, 0, w, h);
+                p.fillStyle = '#8c9a6a';                                   // collines lointaines
+                p.beginPath(); p.moveTo(0, hz);
+                for (let x = 0; x <= w; x += 64) p.lineTo(x, hz - 30 - Math.sin(x / 300) * 22 - Math.sin(x / 90) * 6);
+                p.lineTo(w, hz); p.fill();
+                const cx = w * .62, base = hz + 8;                         // château
+                p.fillStyle = '#3f5a2c';
+                for (const x of [cx - 330, cx - 300, cx + 300, cx + 335, cx - 420]) { p.beginPath(); p.ellipse(x, base - 90, 18, 110, 0, 0, 7); p.fill(); }
+                p.fillStyle = '#ecdcbc'; p.fillRect(cx - 220, base - 120, 440, 120);
+                p.fillStyle = '#e4d2ae'; p.fillRect(cx - 290, base - 150, 90, 150); p.fillRect(cx + 200, base - 150, 90, 150);
+                p.fillStyle = '#5c5662';
+                p.beginPath(); p.moveTo(cx - 230, base - 120); p.lineTo(cx - 190, base - 175); p.lineTo(cx + 190, base - 175); p.lineTo(cx + 230, base - 120); p.fill();
+                for (const x of [cx - 245, cx + 245]) { p.beginPath(); p.moveTo(x - 52, base - 150); p.lineTo(x, base - 250); p.lineTo(x + 52, base - 150); p.fill(); }
+                p.fillStyle = '#b8a688';
+                for (let i = -3; i <= 3; i++) p.fillRect(cx + i * 55 - 10, base - 95, 20, 34);
+                p.fillStyle = '#6f7d3c'; p.fillRect(0, hz, w, h - hz);     // vignes : rangs qui fuient vers l'horizon
+                for (let i = -40; i <= 40; i++) {
+                    p.strokeStyle = i % 2 ? '#3d5222' : '#4a5f28'; p.lineWidth = 26;
+                    p.beginPath(); p.moveTo(w * .5 + i * 6, hz + 4); p.lineTo(w * .5 + i * 140, h); p.stroke();
+                }
+                const haze = p.createLinearGradient(0, hz - 60, 0, hz + 140);
+                haze.addColorStop(0, 'rgba(246,214,154,0)'); haze.addColorStop(.4, 'rgba(246,214,154,.45)'); haze.addColorStop(1, 'rgba(246,214,154,0)');
+                p.fillStyle = haze; p.fillRect(0, hz - 60, w, 200);
+                g.filter = 'blur(18px)'; g.drawImage(c, 0, 0);
+            }) })
+        );
+        backdrop.position.set(-2, 2.0, -9);
+        backdrop.renderOrder = -1;
+        scene.add(backdrop);
+        tryAsset(backdrop.material.map, 'vineyard.jpg');
+
+        // Table laquée
+        const table = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.6, 2.6, 0.1, 128),
+            new THREE.MeshPhysicalMaterial({ map: woodTex, roughness: 0.45, clearcoat: 0.7, clearcoatRoughness: 0.15 })
+        );
+        table.position.y = -0.05;
+        table.receiveShadow = true;
+        scene.add(table);
+
+        // ----- Scroll -----
+        const steps = [...document.querySelectorAll('.step')];
+        const progressBar = document.getElementById('progress');
+        const hint = document.getElementById('hint');
+        let target = 0, p = 0;
+        const readScroll = () => {
+            target = clamp(scrollY / (document.documentElement.scrollHeight - innerHeight));
+            const i = Math.min(steps.length - 1, Math.floor(target * steps.length));
+            steps.forEach((s, j) => s.classList.toggle('on', j === i));
+            hint.style.opacity = target > 0.02 ? 0 : 1;
+        };
+        addEventListener('scroll', readScroll, { passive: true });
+
+        function resize() {
+            renderer.setPixelRatio(Math.min(devicePixelRatio, 2.5));
+            renderer.setSize(innerWidth, innerHeight, false);
+            camera.aspect = innerWidth / innerHeight;
+            camera.filmOffset = camera.aspect > 1 ? -5 : 0; // bouteille décalée à droite, texte à gauche
+            camera.updateProjectionMatrix();
+        }
+        addEventListener('resize', resize);
+        resize(); readScroll();
+
+        const v = new THREE.Vector3(), mouth = new THREE.Vector3(), axis = new THREE.Vector3(), origin = new THREE.Vector3();
+        const impact = new THREE.Vector3(), focus = new THREE.Vector3(), from = new THREE.Vector3(), to = new THREE.Vector3();
+        const clock = new THREE.Clock();
+
+        function shot(p) {
+            let i = 0;
+            while (i < SHOTS.length - 2 && p > SHOTS[i + 1][0]) i++;
+            const a = SHOTS[i], b = SHOTS[i + 1], k = ease(clamp((p - a[0]) / (b[0] - a[0])));
+            return a.map((x, n) => lerp(x, b[n], k));
+        }
+
+        function frame() {
+            const t = clock.getElapsedTime();
+            uTime.value = t;
+            p = lerp(p, target, 0.07);
+            progressBar.style.transform = `scaleX(${p})`;
+
+            // Bouteille : en biais (bas gauche → haut droite) en suspension, puis droite et posée
+            const s = ease(seg(p, T.settle)), up = ease(seg(p, T.upright));
+            bottle.rotation.set(0, lerp(-0.3, 0, up) + (1 - s) * Math.sin(t * 0.4) * 0.05, lerp(-0.6, 0, up));
+            bottle.position.set(lerp(-0.8, 0, up), lerp(0.9, 0, s) + (1 - s) * Math.sin(t * 0.9) * 0.025, 0);
+            bottle.updateMatrixWorld();
+
+            // Vin : le plan monte du point le plus bas jusqu'au col
+            const fill = ease(seg(p, T.fill));
+            const low = Math.min(bottle.localToWorld(v.set(-0.345, 0.05, 0)).y, bottle.localToWorld(v.set(0.345, 0.05, 0)).y);
+            const top = bottle.localToWorld(v.set(0, FILL_TOP, 0)).y;
+            const h = lerp(low, top, fill);
+            wineLevel.constant = h;
+            wine.visible = surface.visible = fill > 0.002;
+
+            // Point d'impact : là où l'axe de la bouteille traverse la surface
+            bottle.localToWorld(origin.set(0, 0, 0));
+            axis.copy(bottle.localToWorld(v.set(0, 1, 0))).sub(origin);
+            impact.copy(origin).addScaledVector(axis, clamp((h - origin.y) / axis.y, 0.1, 2.5));
+
+            // Filet : la tête descend dans la bouteille, puis la queue se détache et tombe
+            const head = seg(p, [T.fill[0] - 0.035, T.fill[0] + 0.005]), tail = seg(p, [T.fill[1] - 0.005, T.fill[1] + 0.035]);
+            const pour = Math.min(head, 1 - tail);
+            stream.visible = head - tail > 0.01;
+            if (stream.visible) {
+                bottle.localToWorld(mouth.set(0, 2.98, 0));
+                const P = pourCurve.points;
+                P[0].copy(mouth).add(v.set(0.3, 1.9, 0));
+                P[1].copy(mouth).add(v.set(0.12, 0.8, 0));
+                P[2].copy(mouth);
+                P[3].copy(mouth).addScaledVector(axis.normalize(), -0.35);
+                P[4].copy(impact);
+                const pts = Array.from({ length: 48 }, (_, n) => pourCurve.getPoint(lerp(tail, head, n / 47)));
+                stream.geometry.dispose();
+                stream.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, 0.02, 12);
+            }
+            if (wine.visible) {
+                const after = 1 - seg(p, [T.fill[1], T.fill[1] + 0.08]);
+                updateSurface(h, impact, 0.12 + pour + 0.4 * after, pour * 0.9 + 0.35 * after * (1 - pour), t);
+            }
+
+            // Bouchon : descend en tournant, puis est comprimé et enfoncé
+            const c = seg(p, T.cork), c1 = easeOut(clamp(c / 0.55)), c2 = ease(clamp((c - 0.55) / 0.45));
+            cork.visible = p > T.cork[0] - 0.02;
+            cork.position.y = c < 0.55 ? lerp(3.75, 3.24, c1) : lerp(3.24, CORK_Y, c2);
+            cork.rotation.y = (1 - c1) * Math.PI * 3;
+            cork.scale.set(1 + 0.04 * bell(c2), 1 - 0.07 * bell(c2), 1 + 0.04 * bell(c2));
+
+            // Capsule : glisse large sur le col puis se resserre (sertissage)
+            const k = seg(p, T.capsule), k1 = easeOut(clamp(k / 0.6)), k2 = clamp((k - 0.6) / 0.4);
+            capsule.visible = p > T.capsule[0] - 0.02;
+            capsule.position.y = lerp(0.8, 0, k1);
+            capsule.rotation.y = (1 - k1) * 1.2;
+            const shrink = lerp(1.22, 1, easeOut(k2)) - 0.015 * bell(k2 * 1.6 - 0.6);
+            capsule.scale.set(shrink, 1, shrink);
+
+            // Étiquette
+            const a = seg(p, T.label);
+            label.visible = a > 0.001;
+            if (label.visible) shapeLabel(a, t);
+            labelMat.opacity = clamp(a * 3);
+
+            // Reflets
+            glint.intensity = 0;
+            for (const [p0, p1, f, e, I] of SWEEPS) {
+                const q = (p - p0) / (p1 - p0);
+                if (q < 0 || q > 1) continue;
+                glint.position.lerpVectors(from.fromArray(f), to.fromArray(e), ease(q));
+                glint.intensity = I * bell(q);
+            }
+
+            // Caméra : plans rapprochés qui suivent chaque étape
+            const [, fy, dist, elev, yaw] = shot(p);
+            bottle.localToWorld(focus.set(0, fy, 0));
+            const d = dist / Math.min(1, camera.aspect * 1.3);
+            camera.position.set(focus.x + Math.sin(yaw) * Math.cos(elev) * d, focus.y + Math.sin(elev) * d, focus.z + Math.cos(yaw) * Math.cos(elev) * d);
+            camera.lookAt(focus);
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+    </script>
+</body>
+</html>

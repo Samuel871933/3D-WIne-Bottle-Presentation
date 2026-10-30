@@ -1,0 +1,41 @@
+{
+  "projet": "Winea : page scroll 3D, bouteille de vin assemblée au défilement",
+  "usage": "Générer chaque image avec ChatGPT, l'enregistrer dans winea/assets/img/ sous le nom indiqué : index.html la charge automatiquement à la place du visuel provisoire (servir la page via un serveur local, ex. `python3 -m http.server`, pas en file://).",
+  "style_commun": "Photographie produit haut de gamme, vignoble bordelais, palette crème / bordeaux #8c1c2c / or patiné #c9a45c / brun chaud, lumière douce, aucun texte parasite, aucun filigrane.",
+  "assets": [
+    {
+      "fichier": "label.png",
+      "role": "Étiquette avant, enroulée autour du corps de la bouteille (environ 1/3 de la circonférence)",
+      "format": "1000 x 1180 px (portrait, ratio 0,85), PNG",
+      "prompt": "Flat, front-facing scan of a premium Bordeaux wine label, perfectly rectangular, filling the whole image edge to edge, no bottle, no perspective, no shadow. Off-white textured cotton paper with subtle embossing. Fine double gold foil border. Centered classical layout: small italic line 'Grand Vin de', large elegant serif wordmark 'WINEA', small caps 'BORDEAUX SUPÉRIEUR', a delicate line engraving of a château with vineyard rows, vintage '2024' in deep burgundy, bottom small text 'Mis en bouteille au château' and '75 cl · 13,5 % vol.'. Spell all text exactly as written. Engraving style, refined, timeless, high resolution."
+    },
+    {
+      "fichier": "cork.jpg",
+      "role": "Texture du bouchon en liège (répétée sur le cylindre)",
+      "format": "1024 x 1024 px, seamless / tileable, JPG",
+      "prompt": "Seamless tileable texture of natural wine cork, extreme close-up, top-down orthographic, even diffuse lighting with no shadows or highlights, warm tan and honey tones with darker granular pores and small lenticels, realistic natural cork grain, no edges, no objects, uniform across the whole image."
+    },
+    {
+      "fichier": "wood.jpg",
+      "role": "Plateau de la table (disque, vu du dessus)",
+      "format": "2048 x 2048 px, seamless / tileable, JPG",
+      "prompt": "Seamless tileable texture of a dark oiled oak table top, top-down orthographic view, straight long grain running horizontally, warm walnut brown with subtle reddish undertones, soft satin sheen, even diffuse lighting without shadows or reflections, no knots in the center, no objects, uniform across the whole image."
+    },
+    {
+      "fichier": "capsule-top.png",
+      "role": "Dessus de la capsule (disque, monogramme doré)",
+      "format": "1024 x 1024 px, PNG fond transparent",
+      "prompt": "Top-down orthographic view of a wine bottle capsule top, perfect circle centered on transparent background, deep burgundy metallic foil (#6e1020) with fine brushed texture, embossed gold monogram 'W' surrounded by a thin laurel ring, soft even lighting, no perspective, no shadow outside the circle."
+    },
+    {
+      "fichier": "vineyard.jpg",
+      "role": "Décor extérieur derrière la table : vignes et château flous. Remplace le fond peint en code.",
+      "format": "2560 x 1600 px (paysage 16:10), JPG",
+      "prompt": "Wide landscape photograph taken at eye level from a terrace at the edge of a Bordeaux vineyard at golden hour. Rows of lush green grapevines start in the lower half of the frame and recede in perspective toward a classic French château in the middle distance, slightly right of center: cream limestone facade, slate-grey roofs, two corner towers with pointed roofs, a few tall cypress trees beside it. Gentle hills on the horizon. The horizon line sits exactly at mid-height of the image. Low warm sun on the upper left, soft golden haze, pale blue sky fading to warm gold near the horizon. Very shallow depth of field as if shot at f/1.4 with an 85 mm lens: the whole scene is strongly out of focus, soft creamy bokeh, the château is recognizable only by its blurred shape. Nothing in the foreground: no table, no bottle, no glass, no people, no animals, no text, no watermark. Natural, luxurious, cinematic, photorealistic."
+    }
+  ],
+  "modele_3d_bouteille": {
+    "note": "ChatGPT ne produit pas de fichier 3D exploitable (.glb). Le prototype modélise la bouteille par révolution d'un profil réel ; pour un modèle plus détaillé, utiliser un générateur 3D (Meshy, Tripo, Rodin) ou Blender avec ce prompt, en exportant en .glb séparé : verre, bouchon, capsule, étiquette.",
+    "prompt": "Realistic Bordeaux wine bottle 750 ml, 300 mm tall, 75 mm body diameter, cylindrical body, pronounced rounded shoulders, long straight neck 29 mm diameter, thick lip ring (bague) at the top, deep punt at the base, dark green glass. Separate meshes: glass bottle, natural cork 45 mm x 24 mm, burgundy metallic capsule 55 mm long covering the neck, front paper label 100 x 120 mm. Clean topology, real-world scale in meters, PBR materials, glTF export."
+  }
+}
