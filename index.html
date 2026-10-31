@@ -51,7 +51,9 @@
         }
         @media (prefers-reduced-motion: reduce) { .card > *, .step.on .card > * { transition: opacity .3s; transform: none; } }
         /* Repli sans 3D (WebGL absent, navigateur ancien, script bloqué) : photo du vignoble et textes empilés */
-        .no3d body { background: #1a120a url(assets/img/vineyard.jpg) center / cover fixed; }
+        /* Calque fixe plutôt que background-attachment: fixed, ignoré par iOS (l'image s'étirerait sur toute la page) */
+        .no3d body { background: #1a120a; }
+        .no3d body::before { content: ""; position: fixed; inset: 0; background: url(assets/img/vineyard.jpg) center / cover; }
         .no3d #scene, .no3d .hint, .no3d .progress { display: none; }
         .no3d .step { display: flex; align-items: flex-end; padding: 0 6vw 11vh; }
         .no3d .card { position: static; max-width: min(420px, 100%); }
@@ -67,7 +69,7 @@
     <main>
         <section class="step"><div class="card"><small>01 · Le verre</small><h2>La bouteille</h2><p>Un verre épais, une épaule douce, un col élancé. Pensée pour garder chaque bulle.</p></div></section>
         <section class="step"><div class="card"><small>02 · Le vin</small><h2>Blanc de Blancs</h2><p>Une robe or pâle et une mousse fine qui monte lentement jusqu'au col.</p></div></section>
-        <section class="step"><div class="card"><small>03 · Le bouchage</small><h2>Liège et muselet</h2><p>Le liège scelle la bouteille ; le muselet le retient sous la pression.</p></div></section>
+        <section class="step"><div class="card"><small>03 · Le bouchage</small><h2>Liège et muselet</h2><p>Le liège scelle la bouteille ; le muselet, serré d'un tour de boucle, le retient sous la pression.</p></div></section>
         <section class="step"><div class="card"><small>04 · La coiffe</small><h2>Feuille d'or</h2><p>Plissée sur le col, elle habille la bouteille jusqu'à l'épaule.</p></div></section>
         <section class="step"><div class="card"><small>05 · L'étiquette</small><h2>Un ciel d'étoiles</h2><p>Noir profond et dorure à chaud, la signature de Nébulleuse.</p></div></section>
         <section class="step"><div class="card"><small>06 · Nébulleuse</small><h2>Au cœur des vignes</h2><p>Blanc de Blancs, Brut. Prête à être servie.</p></div></section>
@@ -88,7 +90,8 @@
             fill:    [0.10, 0.34],
             cork:    [0.39, 0.48],
             cage:    [0.47, 0.535],
-            capsule: [0.56, 0.70],
+            twist:   [0.53, 0.575], // tortillon vrillé pour serrer la ceinture, puis rabattu contre le col
+            capsule: [0.59, 0.70],
             label:   [0.73, 0.87],
             liftoff: [0.015, 0.09], // posée droite sur le fût → soulevée et penchée avant le remplissage
             upright: [0.66, 0.95],
@@ -101,7 +104,9 @@
             [0.34, 1.55, 4.2, 0.10, -0.05],
             [0.40, 2.82, 1.7, 0.18, -0.25],
             [0.53, 2.80, 1.8, 0.24, -0.10],
-            [0.57, 2.65, 2.6, 0.04, -0.35],
+            [0.55, 2.80, 1.25, 0.10, 0.05],
+            [0.575, 2.80, 1.3, 0.12, 0.10],
+            [0.60, 2.65, 2.6, 0.04, -0.35],
             [0.70, 2.65, 2.6, 0.10, -0.25],
             [0.74, 0.70, 2.5, 0.02, -0.40],
             [0.87, 0.70, 2.9, 0.05, -0.30],
@@ -443,18 +448,20 @@
         const wireMat = new THREE.MeshPhysicalMaterial({ color: '#c9a250', metalness: 1, roughness: 0.3 });
         const WIRE = 0.0035;
         // Deux brins côte à côte le long d'un chemin, enroulés l'un autour de l'autre (`turns` tours) à partir de la fraction `from`
-        function twisted(path, turns, from = 0) {
+        const twisted = (path, turns, from) => twistedPts(path, turns, from).map(s => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(s), 140, WIRE, 6), wireMat));
+        // open : écartement des brins vers le bout (en V) ; pitch : répartition des tours le long du fil (f(0) = 0, f(1) = 1)
+        function twistedPts(path, turns, from = 0, open = 0, pitch = u => u) {
             const curve = new THREE.CatmullRomCurve3(path), strands = [[], []], n = 90;
             const P = new THREE.Vector3(), T = new THREE.Vector3(), N = new THREE.Vector3(), B = new THREE.Vector3();
             for (let i = 0; i <= n; i++) {
-                const u = i / n, th = Math.max(0, u - from) / (1 - from) * turns * Math.PI * 2;
+                const u = i / n, th = pitch(Math.max(0, u - from) / (1 - from)) * turns * Math.PI * 2, r = WIRE + open * (0.0255 + 0.006 * u);
                 curve.getPointAt(u, P); curve.getTangentAt(u, T);
                 N.set(P.x, 0, P.z).normalize(); B.crossVectors(T, N).normalize(); N.crossVectors(B, T);
                 for (let k = 0; k < 2; k++) strands[k].push(P.clone()
-                    .addScaledVector(B, Math.cos(th + k * Math.PI) * WIRE)
-                    .addScaledVector(N, Math.sin(th + k * Math.PI) * WIRE));
+                    .addScaledVector(B, Math.cos(th + k * Math.PI) * r)
+                    .addScaledVector(N, Math.sin(th + k * Math.PI) * r));
             }
-            return strands.map(s => new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(s), 140, WIRE, 6), wireMat));
+            return strands;
         }
         const around = (pts, a) => cm(pts).map(v => new THREE.Vector3(v.x * Math.sin(a), v.y, v.x * Math.cos(a)));
         const cage = new THREE.Group();
@@ -467,7 +474,8 @@
             eye.rotation.y = a + Math.PI / 2;
             cage.add(eye);
         }
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(RING_R, 0.004, 6, 96), wireMat);
+        // Ceinture ouverte à l'avant : ses deux bouts deviennent les brins du tortillon (géométrie posée par setTail)
+        const ring = new THREE.Mesh(undefined, wireMat);
         ring.rotation.x = Math.PI / 2;
         ring.position.y = RING_Y;
         const crown = new THREE.Mesh(new THREE.TorusGeometry(0.115, WIRE, 6, 96), wireMat);
@@ -475,9 +483,41 @@
         crown.position.y = 3.168;
         const plaque = new THREE.Mesh(new THREE.LatheGeometry(smooth([[0,31.98],[0.6,31.96],[0.9,31.9],[1.02,31.8],[1.08,31.7],[1.15,31.645],[1.25,31.66],
             [1.32,31.62],[1.36,31.52],[1.36,31.44],[1.32,31.42]], 60), 96), new THREE.MeshPhysicalMaterial({ color: '#dcdcd6', metalness: 1, roughness: 0.18, side: THREE.DoubleSide }));
-        const loop = new THREE.Mesh(new THREE.TorusGeometry(0.025, WIRE, 6, 32), wireMat); // boucle au bout du tortillon, à plat contre le col
-        loop.position.set(0, 2.725, 0.15);
-        cage.add(ring, crown, plaque, loop, ...twisted(around([[1.47,28.55],[1.5,28.3],[1.5,27.9],[1.5,27.5]], 0), 5)); // tortillon
+        // Tortillon sur un pivot au départ de la ceinture : dressé vers l'extérieur à la pose, la boucle tourne et les deux brins
+        // s'enroulent depuis la ceinture (tours qui s'ajoutent), puis rabattu à plat contre le col (fold = 0 : repos)
+        const PIVOT = new THREE.Vector3(0, RING_Y, 0.147);
+        const TAIL = around([[1.47,28.55],[1.5,28.3],[1.5,27.9],[1.5,27.5]], 0), TURNS = [0, 2.5]; // départ sans croisement ; écart entier en demi-tours : boucle de nouveau à plat
+        const fold = new THREE.Group();
+        fold.position.copy(PIVOT);
+        const tail = new THREE.Mesh(undefined, wireMat);
+        TAIL[1].x += 0.0015; TAIL[2].x -= 0.001; // fil tordu à la main : légère courbe en S, pas une tige droite
+        // Torsades serrées près de la ceinture, plus lâches vers la boucle, pas un peu irrégulier (croissante, f(1) = 1)
+        const tailPitch = u => 1 - (1 - u) ** 1.3 + 0.03 * Math.sin(4 * Math.PI * u);
+        // Un seul fil : brin aller, boucle en goutte (le fil replié sur lui-même, pas un anneau soudé), brin retour.
+        // Brins écartés en V par la boucle tant qu'ils ne sont pas enroulés, ils se resserrent en tournant.
+        // Construit en repère bouteille (twistedPts lit la direction radiale), puis ramené au pivot
+        const setTail = turns => {
+            const k = (turns - TURNS[0]) / (TURNS[1] - TURNS[0]);
+            const open = lerp(1, 0.06, k), [a, b] = twistedPts(TAIL, turns, 0, open, tailPitch);
+            // Trou de la ceinture = écart des brins à leur départ (x = ±r en u = 0, cf. twistedPts), centré sur l'avant (+z)
+            const gap = Math.asin((WIRE + open * 0.0255) / RING_R);
+            ring.geometry.dispose();
+            ring.geometry = new THREE.TorusGeometry(RING_R, 0.004, 6, 96, Math.PI * 2 - 2 * gap).rotateZ(Math.PI / 2 + gap);
+            const E0 = a.at(-1), E1 = b.at(-1), M = E0.clone().lerp(E1, 0.5);
+            const T = E0.clone().sub(a.at(-4)).add(E1).sub(b.at(-4)).normalize(), S = E0.clone().sub(E1).normalize();
+            // Goutte : part dans l'axe des brins (pas de cassure), s'arrondit au bout. φ de 0 (E0) à 2π (E1)
+            // Au départ simple coude en U (épingle, brins parallèles écartés) ; en vrillant il s'allonge et s'évase en goutte
+            const g = E0.distanceTo(E1) / 2, eye = Array.from({ length: 31 }, (_, j) => {
+                const x = (j + 1) / 32 * Math.PI, sn = Math.sin(x);
+                return M.clone().addScaledVector(T, lerp(g * sn, 0.075 * sn * sn, k)).addScaledVector(S, Math.cos(x) * (g + 0.05 * k * sn * sn));
+            });
+            tail.geometry.dispose();
+            tail.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([...a, ...eye, ...b.reverse()]), 420, WIRE, 6).translate(-PIVOT.x, -PIVOT.y, -PIVOT.z);
+        };
+        let twLast = TURNS[1];
+        setTail(twLast);
+        fold.add(tail);
+        cage.add(ring, crown, plaque, fold);
         cage.traverse(m => m.castShadow = true);
         bottle.add(cage);
 
@@ -840,7 +880,10 @@
             cork.scale.set(1 + 0.04 * bell(c2), 1 - 0.07 * bell(c2), 1 + 0.04 * bell(c2));
 
             // Muselet : descend ouvert sur le bouchon puis se serre sous la bague
-            const m = seg(p, T.cage), m1 = easeOut(clamp(m / 0.7)), mw = lerp(1.15, 1, ease(clamp((m - 0.6) / 0.4)));
+            // puis on tourne la boucle : les brins s'enroulent et la ceinture se resserre à chaque tour, enfin le tortillon est rabattu
+            const w = seg(p, T.twist), turn = ease(clamp(w / 0.7)), tw = lerp(...TURNS, turn);
+            const m = seg(p, T.cage), m1 = easeOut(clamp(m / 0.7)), mw = lerp(1.15, 1.12, ease(clamp((m - 0.6) / 0.4))) - 0.12 * turn;
+            if (tw !== twLast) { setTail(tw); twLast = tw; }            fold.rotation.x = -Math.PI / 2 * (1 - ease(clamp((w - 0.75) / 0.25)));
             cage.visible = p > T.cage[0] - 0.01;
             cage.position.y = lerp(0.35, 0, m1);
             cage.scale.set(mw, 1, mw);
