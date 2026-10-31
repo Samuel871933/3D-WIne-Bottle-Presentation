@@ -1,41 +1,58 @@
 {
-  "projet": "Winea : page scroll 3D, bouteille de vin assemblée au défilement",
-  "usage": "Générer chaque image avec ChatGPT, l'enregistrer dans winea/assets/img/ sous le nom indiqué : index.html la charge automatiquement à la place du visuel provisoire (servir la page via un serveur local, ex. `python3 -m http.server`, pas en file://).",
-  "style_commun": "Photographie produit haut de gamme, vignoble bordelais, palette crème / bordeaux #8c1c2c / or patiné #c9a45c / brun chaud, lumière douce, aucun texte parasite, aucun filigrane.",
+  "projet": "Nébulleuse : page scroll 3D, bouteille de Blanc de Blancs Brut (champenoise) assemblée au défilement",
+  "usage": "Générer chaque image avec ChatGPT, l'enregistrer dans assets/img/ sous le nom indiqué : index.html la charge automatiquement à la place du visuel provisoire (servir la page via un serveur local, ex. `python -m http.server`, pas en file://).",
+  "style_commun": "Photographie produit haut de gamme, vin effervescent, palette noir nuit #04070f / or #c9a45c / vert bouteille champagne / doré pâle du vin, lumière douce et chaude, aucun texte parasite, aucun filigrane.",
   "assets": [
     {
       "fichier": "label.png",
-      "role": "Étiquette avant, enroulée autour du corps de la bouteille (environ 1/3 de la circonférence)",
-      "format": "1000 x 1180 px (portrait, ratio 0,85), PNG",
-      "prompt": "Flat, front-facing scan of a premium Bordeaux wine label, perfectly rectangular, filling the whole image edge to edge, no bottle, no perspective, no shadow. Off-white textured cotton paper with subtle embossing. Fine double gold foil border. Centered classical layout: small italic line 'Grand Vin de', large elegant serif wordmark 'WINEA', small caps 'BORDEAUX SUPÉRIEUR', a delicate line engraving of a château with vineyard rows, vintage '2024' in deep burgundy, bottom small text 'Mis en bouteille au château' and '75 cl · 13,5 % vol.'. Spell all text exactly as written. Engraving style, refined, timeless, high resolution."
-    },
-    {
-      "fichier": "cork.jpg",
-      "role": "Texture du bouchon en liège (répétée sur le cylindre)",
-      "format": "1024 x 1024 px, seamless / tileable, JPG",
-      "prompt": "Seamless tileable texture of natural wine cork, extreme close-up, top-down orthographic, even diffuse lighting with no shadows or highlights, warm tan and honey tones with darker granular pores and small lenticels, realistic natural cork grain, no edges, no objects, uniform across the whole image."
-    },
-    {
-      "fichier": "wood.jpg",
-      "role": "Plateau de la table (disque, vu du dessus)",
-      "format": "2048 x 2048 px, seamless / tileable, JPG",
-      "prompt": "Seamless tileable texture of a dark oiled oak table top, top-down orthographic view, straight long grain running horizontally, warm walnut brown with subtle reddish undertones, soft satin sheen, even diffuse lighting without shadows or reflections, no knots in the center, no objects, uniform across the whole image."
+      "role": "Étiquette avant carrée, enroulée autour du corps de la bouteille (environ 1/3 de la circonférence)",
+      "format": "Carré, PNG (1244 x 1244 px actuellement)",
+      "statut": "Fourni : recadré depuis la photo d'étiquette fournie (marge blanche retirée, original supprimé). Rien à générer. Pour la remplacer, garder un carré noir et or bord à bord : la dorure est détectée automatiquement par sa couleur."
     },
     {
       "fichier": "capsule-top.png",
-      "role": "Dessus de la capsule (disque, monogramme doré)",
+      "role": "Dessus plat de la coiffe dorée (petit disque au sommet du dôme du bouchon), réutilisé sur la plaque du muselet. Sans ce fichier, une étoile dessinée en code est affichée.",
       "format": "1024 x 1024 px, PNG fond transparent",
-      "prompt": "Top-down orthographic view of a wine bottle capsule top, perfect circle centered on transparent background, deep burgundy metallic foil (#6e1020) with fine brushed texture, embossed gold monogram 'W' surrounded by a thin laurel ring, soft even lighting, no perspective, no shadow outside the circle."
+      "statut": "Fourni (médaillon doré embossé en étoile, réduit à 512 x 512 px).",
+      "prompt": "Top-down orthographic view of the flat top of a champagne bottle gold foil capsule, perfect circle touching all four edges of the image, transparent background outside the circle. Warm gold metallic foil (#d4af6a) with a fine brushed texture and very slight crinkles, a thin embossed ring near the edge and a centered embossed eight-pointed star in a slightly darker antique gold, matching a black-and-gold starry label. Soft even lighting, no perspective, no shadow, no text."
+    },
+    {
+      "fichier": "cork.jpg",
+      "role": "Texture du bouchon champignon en liège (enroulée sur le fût et la tête)",
+      "format": "1024 x 1024 px, seamless / tileable, JPG",
+      "statut": "Inchangé : la texture actuelle convient.",
+      "prompt": "Seamless tileable texture of natural wine cork, extreme close-up, top-down orthographic, even diffuse lighting with no shadows or highlights, warm tan and honey tones with darker granular pores and small lenticels, realistic natural cork grain, no edges, no objects, uniform across the whole image."
     },
     {
       "fichier": "vineyard.jpg",
-      "role": "Décor extérieur derrière la table : vignes et château flous. Remplace le fond peint en code.",
+      "role": "Décor extérieur derrière la table : vignes et château flous",
       "format": "2560 x 1600 px (paysage 16:10), JPG",
-      "prompt": "Wide landscape photograph taken at eye level from a terrace at the edge of a Bordeaux vineyard at golden hour. Rows of lush green grapevines start in the lower half of the frame and recede in perspective toward a classic French château in the middle distance, slightly right of center: cream limestone facade, slate-grey roofs, two corner towers with pointed roofs, a few tall cypress trees beside it. Gentle hills on the horizon. The horizon line sits exactly at mid-height of the image. Low warm sun on the upper left, soft golden haze, pale blue sky fading to warm gold near the horizon. Very shallow depth of field as if shot at f/1.4 with an 85 mm lens: the whole scene is strongly out of focus, soft creamy bokeh, the château is recognizable only by its blurred shape. Nothing in the foreground: no table, no bottle, no glass, no people, no animals, no text, no watermark. Natural, luxurious, cinematic, photorealistic."
+      "statut": "Inchangé. Optionnel : pour l'ambiance cave / restaurant de la photo de référence, générer le prompt ci-dessous et l'enregistrer sous ce même nom vineyard.jpg (garder l'ancien en sauvegarde).",
+      "prompt_ambiance_cave": "Wide landscape photograph of the interior of an elegant wine cellar restaurant in the evening, seen at eye level from behind a dark wooden table. Wooden wine racks full of bottles on the left, a few empty crystal flutes on a table in the middle distance, warm candle and pendant lights glowing amber. The horizon line (eye level) sits exactly at mid-height of the image. Very shallow depth of field as if shot at f/1.4 with an 85 mm lens: the whole scene is strongly out of focus with large soft creamy bokeh discs. Dark, warm, intimate palette of deep browns, black and gold. Nothing in the foreground: no bottle in focus, no people, no text, no watermark. Luxurious, cinematic, photorealistic."
+    }
+  ],
+  "fut_de_chene": [
+    {
+      "fichier": "barrel-staves.jpg",
+      "role": "Flanc du fût (texture enroulée une fois autour du fût : bord gauche = bord droit). Les cercles de fer sont en 3D, ne pas les dessiner. Sans ce fichier, des douelles dessinées en code sont affichées.",
+      "format": "2048 x 1024 px (ratio 2:1), JPG, raccord parfait gauche/droite",
+      "prompt": "Seamless horizontally tileable texture of the side of an old French oak wine barrel, flat orthographic front view as if the barrel surface were unrolled, the left edge matching the right edge perfectly. About 24 narrow vertical oak staves running from top to bottom of the image, each stave slightly different in tone, with thin dark gaps between staves. Weathered outdoor oak: warm honey and grey-brown tones, visible straight vertical wood grain, subtle red wine stains in places, slight sun-bleaching, a few small nail marks. NO iron hoops, NO metal bands, no barrel outline, no background, no perspective, no shadows, no text. Even soft diffuse lighting, photorealistic, high detail."
+    },
+    {
+      "fichier": "barrel-head.jpg",
+      "role": "Fond du dessus du fût, sur lequel la bouteille est posée (disque).",
+      "format": "2048 x 2048 px, JPG, le disque doit toucher les 4 bords de l'image",
+      "prompt": "Top-down orthographic view of the head (top lid) of an old French oak wine barrel, a perfect circle touching all four edges of the image, made of 5 straight oak planks joined side by side running horizontally, thin dark joints between planks. Weathered warm oak with straight grain, a faint circular wine ring stain slightly off-center, very subtle branded stamp of a small eight-pointed star near the edge. No iron hoop, no stave rim, no bottle, no objects, no perspective, no shadows, no text. Even soft diffuse lighting, photorealistic, high detail."
+    },
+    {
+      "fichier": "barrel-hoop.jpg",
+      "role": "Cercles en fer du fût (bande répétée 8 fois sur le tour). Sans ce fichier, une version dessinée en code est affichée.",
+      "format": "2048 x 512 px (ratio 4:1), JPG, raccord parfait gauche/droite",
+      "prompt": "Seamless horizontally tileable texture of a single flat hand-forged iron barrel hoop band, straight horizontal strip filling the whole image edge to edge, flat orthographic front view. Aged dark grey-brown wrought iron with hammer marks, patches of orange-brown rust, worn slightly brighter metal along the top and bottom edges, two round domed rivets evenly spaced. The left edge matches the right edge perfectly. No wood, no background, no perspective, no shadows, no text. Even soft diffuse lighting, photorealistic, high detail."
     }
   ],
   "modele_3d_bouteille": {
-    "note": "ChatGPT ne produit pas de fichier 3D exploitable (.glb). Le prototype modélise la bouteille par révolution d'un profil réel ; pour un modèle plus détaillé, utiliser un générateur 3D (Meshy, Tripo, Rodin) ou Blender avec ce prompt, en exportant en .glb séparé : verre, bouchon, capsule, étiquette.",
-    "prompt": "Realistic Bordeaux wine bottle 750 ml, 300 mm tall, 75 mm body diameter, cylindrical body, pronounced rounded shoulders, long straight neck 29 mm diameter, thick lip ring (bague) at the top, deep punt at the base, dark green glass. Separate meshes: glass bottle, natural cork 45 mm x 24 mm, burgundy metallic capsule 55 mm long covering the neck, front paper label 100 x 120 mm. Clean topology, real-world scale in meters, PBR materials, glTF export."
+    "note": "ChatGPT ne produit pas de fichier 3D exploitable (.glb). Le prototype modélise la bouteille par révolution d'un profil réel ; pour un modèle plus détaillé, utiliser un générateur 3D (Meshy, Tripo, Rodin) ou Blender avec ce prompt, en exportant en .glb séparé : verre, bouchon, muselet, coiffe, étiquette.",
+    "prompt": "Realistic champagne bottle 750 ml, 300 mm tall, 88 mm body diameter, thick glass, cylindrical body, long gentle sloping shoulder with no sharp break, narrow neck 28 mm diameter, crown finish lip ring at the top, very deep punt at the base, light champagne-green glass. Separate meshes: glass bottle; natural cork mushroom-shaped, shank 24 mm inserted, head 29 mm diameter protruding 16 mm above the lip; wire muselet cage; gold metallic foil capsule covering cork, muselet and the whole neck down to the start of the shoulder (about 105 mm long); square black front label 95 x 95 mm placed low on the body. Clean topology, real-world scale in meters, PBR materials, glTF export."
   }
 }
