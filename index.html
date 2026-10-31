@@ -24,7 +24,11 @@
         ::-webkit-scrollbar-thumb { background: rgba(201, 164, 92, .55); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
         html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Jost, "Helvetica Neue", Arial, sans-serif; font-weight: 300; }
-        #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+        #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.2s ease; }
+        /* Scène cachée tant que les vraies textures ne sont pas là (sinon on voit les visuels provisoires) ; le logo pulse en attendant */
+        .loaded #scene { opacity: 1; }
+        html:not(.loaded):not(.no3d) .brand { animation: pulse 1.6s ease-in-out infinite; }
+        @keyframes pulse { 50% { opacity: .35; } }
         /* Vignette cinéma, assombrie en bas à gauche sous le texte */
         body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 60% 45%, transparent 50%, rgba(0, 0, 0, .35) 100%), radial-gradient(ellipse 70% 60% at 0% 100%, rgba(10, 7, 5, .82), rgba(10, 7, 5, .35) 55%, transparent 80%), linear-gradient(rgba(10, 7, 5, .62), transparent 24%); }
         .progress { position: fixed; left: 0; top: 0; height: 1px; width: 100%; background: var(--gold); transform-origin: left; transform: scaleX(0); z-index: 3; }
@@ -125,6 +129,11 @@
         try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' }); }
         catch (e) { document.documentElement.classList.add('no3d'); throw e; }
         document.documentElement.classList.add('ok3d');
+        // Fondu d'entrée une fois toutes les images et le HDR chargés (ou en échec), deux frames plus tard pour qu'elles soient
+        // envoyées au GPU ; au pire après 10 s (réseau très lent) avec les visuels provisoires
+        const reveal = () => requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.add('loaded')));
+        THREE.DefaultLoadingManager.onLoad = reveal;
+        setTimeout(reveal, 10000);
         // Mobile en arrière-plan : le GPU peut reprendre le contexte ; on recharge au retour plutôt que d'afficher un canvas noir
         canvas.addEventListener('webglcontextlost', e => e.preventDefault());
         canvas.addEventListener('webglcontextrestored', () => location.reload());
