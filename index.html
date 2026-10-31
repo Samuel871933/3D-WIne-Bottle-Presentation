@@ -809,6 +809,7 @@
             renderer.setSize(innerWidth, innerHeight, false);
             camera.aspect = innerWidth / innerHeight;
             camera.filmOffset = camera.aspect > 1 ? -5 : 0; // bouteille décalée à droite, texte à gauche
+            backdrop.scale.setScalar(Math.max(1, camera.aspect / 1.9)); // écrans plus larges que 16:9 : sinon le plan large de fin voit au-delà du décor
             camera.updateProjectionMatrix();
         }
         addEventListener('resize', resize);
